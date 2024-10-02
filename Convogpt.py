@@ -5,7 +5,6 @@ from sklearn.metrics.pairwise import cosine_similarity
 import time
 import csv
 from datetime import datetime
-import wikipedia
 import random
 
 # Load and preprocess data
@@ -44,13 +43,6 @@ def log_interaction(question, answer):
     with open(log_file, 'a', newline='', encoding='utf-8') as f:
         writer = csv.writer(f, quoting=csv.QUOTE_ALL)
         writer.writerow([timestamp, question, answer])
-
-# Wikipedia search function
-def wikipedia_search(query):
-    try:
-        return wikipedia.summary(query, sentences=2)
-    except:
-        return None
 
 # Basic communication responses
 def basic_communication(query):
@@ -180,7 +172,7 @@ def process_question(question, data):
         progress_bar.progress(50)
 
     # Display result
-    tab1, tab2, tab3 = st.tabs(["Answer", "Context", "Wikipedia"])
+    tab1, tab2 = st.tabs(["Answer", "Context"])
     
     with tab1:
         st.markdown(f"<h3 style='color: #007BFF;'>Question</h3>", unsafe_allow_html=True)
@@ -192,7 +184,7 @@ def process_question(question, data):
             st.markdown(f"<p style='color: #333333; background-color: #FFFFFF; padding: 15px; border-radius: 10px; border: 1px solid #007BFF;'>{answer}</p>", unsafe_allow_html=True)
             log_interaction(question, answer)
         else:
-            answer = "Sorry, no relevant information found in our database for your question. Please check the Wikipedia tab for more general information."
+            answer = "Sorry, no relevant information found in our database for your question."
             st.markdown(f"<p style='color: #333333; background-color: #FFFFFF; padding: 15px; border-radius: 10px; border: 1px solid #007BFF;'>{answer}</p>", unsafe_allow_html=True)
             log_interaction(question, answer)
     
@@ -200,15 +192,7 @@ def process_question(question, data):
         if relevant_data is not None:
             st.subheader("Most Relevant Context")
             st.markdown(f"<p style='color: #333333;'>{relevant_data['context']}</p>", unsafe_allow_html=True)
-    
-    with tab3:
-        st.subheader("Wikipedia Information")
-        wiki_info = wikipedia_search(question)
-        if wiki_info:
-            st.markdown(f"<p style='color: #333333;'>{wiki_info}</p>", unsafe_allow_html=True)
-        else:
-            st.write("No relevant Wikipedia information found.")
-    
+
     progress_bar.progress(100)
     time.sleep(0.5)
     progress_bar.empty()
@@ -224,43 +208,23 @@ def main():
         st.title("ConvoGpt - BPP University QA")
         st.markdown("---")
         st.subheader("About")
-        st.write("This AI-powered app answers questions about BPP University using the provided dataset and Wikipedia knowledge.")
+        st.write("This AI-powered assistant provides answers to your queries related to BPP University.")
         st.markdown("---")
-        st.subheader("Instructions")
-        st.write("1. Type your question in the input box.")
-        st.write("2. Press Enter or click 'Submit' to get an answer.")
-        st.write("3. Explore related information in the 'Context' and 'Wikipedia' tabs.")
-        st.markdown("---")
-        st.caption("Powered by Convosoft")
+        st.write("## Instructions")
+        st.write("Type your question in the text box below and click 'Ask'.")
 
-    data = load_and_preprocess_data()
-
-    if data is not None:
-        st.title("BPP University Q&A Assistant")
+    # Load data
+    df = load_and_preprocess_data()
+    if df is not None:
+        st.header("Ask Your Question")
+        user_input = st.text_input("Your question:")
         
-        # Question input with auto-submit on Enter key
-        question = st.text_input("What would you like to know about BPP University?", key="question_input", on_change=submit_question)
-        
-        # Submit button (optional, as Enter key now submits the question)
-        st.button("Submit", on_click=submit_question)
+        if st.button("Ask"):
+            if user_input:
+                process_question(user_input, df)
+            else:
+                st.warning("Please enter a question.")
 
-        # Process the question if it exists in session state
-        if 'question' in st.session_state and st.session_state.question:
-            process_question(st.session_state.question, data)
-            # Clear the question after processing
-            st.session_state.question = ""
-
-        # Data preview
-        with st.expander("Data Preview"):
-            st.dataframe(data.head(), use_container_width=True)
-    else:
-        st.error("Unable to load data. Please check if 'bpp_university_qa.csv' exists in the script directory.")
-
-# Function to handle question submission
-def submit_question():
-    if st.session_state.question_input:
-        st.session_state.question = st.session_state.question_input
-        st.session_state.question_input = ""  # Clear the input field
-
+# Run the app
 if __name__ == "__main__":
     main()
